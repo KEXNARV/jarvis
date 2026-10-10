@@ -56,11 +56,7 @@ impl Core {
     pub fn pixels(&self, w: usize, h: usize, sp: usize) -> (Vec<u8>, Vec<[f64; 3]>) {
         let sp = sp.max(2);
         let (dw, dh) = ((w / sp).max(8), (h / sp).max(8));
-        // Bloques de ~3×3 puntos: lo de atrás queda tapado igual que en braille.
-        let mut g = Grid::with_dots(dw, dh, 3, 3);
-        self.paint(&mut g);
-        let pal = self.palette();
-        // Índice 0 = transparente; 1 + tinta·3 + (tono-1) para los demás.
+        let (dots, colors) = self.dots(dw, dh);
         let mut img = vec![0u8; w * h];
         // Casi media separación de radio: círculos que se ven como puntos y no como cuadraditos.
         let r = sp as f64 * 0.46;
@@ -70,11 +66,10 @@ impl Core {
         };
         for j in 0..dh {
             for i in 0..dw {
-                let d = g.dots[j * dw + i];
-                if d & 3 == 0 {
+                let idx = dots[j * dw + i];
+                if idx == 0 {
                     continue;
                 }
-                let idx = 1 + (d >> 2) * 3 + (d & 3) - 1;
                 let (cx, cy) = ((i * sp + sp / 2) as isize, (j * sp + sp / 2) as isize);
                 for (ox, oy) in &offs {
                     let (x, y) = (cx + ox, cy + oy);
@@ -84,7 +79,20 @@ impl Core {
                 }
             }
         }
-        let colors: Vec<[f64; 3]> = pal.iter().flat_map(|ink| (1..4).map(move |tone| ink[tone])).collect();
         (img, colors)
+    }
+
+    /// Los puntos sin dibujar: una rejilla de `dw`×`dh` con un índice de color por punto
+    /// (0 = apagado). La página de Iris los pinta ella misma, que es mucho más barato que
+    /// recorrer una imagen entera en cada cuadro.
+    pub fn dots(&self, dw: usize, dh: usize) -> (Vec<u8>, Vec<[f64; 3]>) {
+        // Bloques de ~3×3 puntos: lo de atrás queda tapado igual que en braille.
+        let mut g = Grid::with_dots(dw, dh, 3, 3);
+        self.paint(&mut g);
+        let pal = self.palette();
+        // Índice 0 = transparente; 1 + tinta·3 + (tono-1) para los demás.
+        let dots = g.dots.iter().map(|&d| if d & 3 == 0 { 0 } else { 1 + (d >> 2) * 3 + (d & 3) - 1 }).collect();
+        let colors = pal.iter().flat_map(|ink| (1..4).map(move |tone| ink[tone])).collect();
+        (dots, colors)
     }
 }
