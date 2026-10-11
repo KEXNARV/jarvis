@@ -1,4 +1,4 @@
-//! El mouse: rueda, clics en adjuntos y miniaturas, y arrastrar para copiar del chat.
+//! El mouse: rueda, clics en adjuntos, miniaturas y enlaces, y arrastrar para copiar del chat.
 
 use crate::*;
 
@@ -37,6 +37,8 @@ pub(crate) fn on_mouse(app: &mut App, m: crossterm::event::MouseEvent) {
             s.pointer = None;
             if s.is_empty() {
                 app.sel = None;
+                // Un clic sin arrastrar sobre una URL la abre en el navegador.
+                abrir_enlace(app, at);
                 return;
             }
             // Queda resaltado hasta el próximo clic o tecla, para ver qué se copió.
@@ -90,6 +92,26 @@ pub(crate) fn copied(app: &mut App, text: &str) {
         format!("copiado · {n} caracteres")
     } else {
         "no pude copiar al portapapeles".to_string()
+    };
+    app.flash = Some((msg, Instant::now()));
+}
+
+/// Si bajo el puntero hay una URL de la conversación, la abre en el navegador.
+fn abrir_enlace(app: &mut App, at: (u16, u16)) {
+    let urls: Vec<String> = app.messages.iter().flat_map(|m| enlace::urls(&m.text)).collect();
+    if urls.is_empty() {
+        return;
+    }
+    let view = app.view.borrow();
+    if !view.area.contains(ratatui::layout::Position::new(at.0, at.1)) {
+        return;
+    }
+    let Some(url) = enlace::bajo(&view, view.locate(at), &urls) else { return };
+    drop(view);
+    let msg = if enlace::abrir(&url) {
+        format!("abriendo {}", enlace::dominio(&url))
+    } else {
+        "no pude abrir el enlace".to_string()
     };
     app.flash = Some((msg, Instant::now()));
 }

@@ -122,6 +122,27 @@ impl R {
         s
     }
 
+    /// Texto corrido: las URL sueltas salen como enlace (subrayadas, en el acento), porque un
+    /// clic sobre ellas las abre (enlace.rs).
+    fn texto(&mut self, t: &str) {
+        let base = self.style();
+        if self.link.is_some() {
+            return self.push(t, base);
+        }
+        let mut rest = t;
+        for url in crate::enlace::urls(t) {
+            let Some(i) = rest.find(&url) else { continue };
+            if i > 0 {
+                self.push(&rest[..i], base);
+            }
+            self.push(&url, base.fg(theme::accent()).add_modifier(Modifier::UNDERLINED));
+            rest = &rest[i + url.len()..];
+        }
+        if !rest.is_empty() {
+            self.push(rest, base);
+        }
+    }
+
     fn push(&mut self, text: &str, style: Style) {
         let seg = Seg { text: text.to_string(), style };
         match &mut self.table {
@@ -207,7 +228,7 @@ impl R {
         match ev {
             Event::Start(tag) => self.start(tag),
             Event::End(tag) => self.end(tag),
-            Event::Text(t) => self.push(&t, self.style()),
+            Event::Text(t) => self.texto(&t),
             Event::Code(t) => {
                 let st = Style::new().fg(GREEN);
                 self.push(&t, st);
