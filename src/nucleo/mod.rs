@@ -41,6 +41,13 @@ pub struct Core {
     buddies: Vec<Box<dyn Buddy>>,
 }
 
+/// Qué piezas del buddy original se dibujan, un bit por pieza (`CAPA_*` en
+/// `buddies::original`); `u32::MAX` es todas. Para la página de Iris, que lo muestra desarmado.
+#[allow(dead_code)]
+pub fn capas(mascara: u32) {
+    buddies::original::CAPAS.store(mascara, std::sync::atomic::Ordering::Relaxed);
+}
+
 impl Core {
     pub fn new() -> Self {
         let baymax: Baymax = Original::nuevo(Cara::new());

@@ -38,6 +38,33 @@ use crate::nucleo::rejilla::Grid;
 
 pub(crate) mod animo;
 pub(crate) mod escena;
+
+/// Qué piezas se dibujan, un bit por pieza (`CAPA_*`); todas por defecto. La terminal no lo
+/// toca; la página de Iris lo usa para mostrar el núcleo desarmado, pieza por pieza.
+pub(crate) static CAPAS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(u32::MAX);
+pub(crate) const CAPA_ESCALA: u32 = 0;
+pub(crate) const CAPA_TAREAS: u32 = 1;
+pub(crate) const CAPA_ARCOS: u32 = 2;
+pub(crate) const CAPA_COLA: u32 = 3;
+pub(crate) const CAPA_PRENSAS: u32 = 4;
+pub(crate) const CAPA_VOZ: u32 = 5;
+pub(crate) const CAPA_ONDAS: u32 = 6;
+pub(crate) const CAPA_RADAR: u32 = 7;
+pub(crate) const CAPA_IDEAS: u32 = 8;
+pub(crate) const CAPA_PAQUETES: u32 = 9;
+pub(crate) const CAPA_PUNTADAS: u32 = 10;
+pub(crate) const CAPA_GIT: u32 = 11;
+pub(crate) const CAPA_PREGUNTA: u32 = 12;
+pub(crate) const CAPA_ZETAS: u32 = 13;
+pub(crate) const CAPA_BROTE: u32 = 14;
+pub(crate) const CAPA_LUPA: u32 = 15;
+pub(crate) const CAPA_CENTRO: u32 = 16;
+pub(crate) const CAPA_HIJOS: u32 = 17;
+pub(crate) const CAPA_MOTAS: u32 = 18;
+
+fn ve(capa: u32) -> bool {
+    CAPAS.load(std::sync::atomic::Ordering::Relaxed) & (1 << capa) != 0
+}
 pub(crate) mod guion;
 
 use animo::Animo;
@@ -221,7 +248,7 @@ impl<C: Centro + 'static> Buddy for Original<C> {
     fn paint(&self, g: &mut Grid, ctx: &Contexto) {
         let e = Escena::new(self, ctx, g);
         let (p, a, ancla) = (&self.animo.p, &self.animo, &e.ancla);
-        if !self.mini {
+        if !self.mini && ve(CAPA_ESCALA) {
             self.escala.paint(
                 g,
                 ctx,
@@ -245,28 +272,60 @@ impl<C: Centro + 'static> Buddy for Original<C> {
                 },
             );
         }
-        self.tareas.paint(g, ctx, p.plan);
-        if !self.mini {
+        if ve(CAPA_TAREAS) {
+            self.tareas.paint(g, ctx, p.plan);
+        }
+        if !self.mini && ve(CAPA_ARCOS) {
             for arcos in &self.arcos {
                 arcos.paint(g, ctx, arcos::Pinta { ancla, giro: a.arc_phase, arcs: p.arcs, arc_len: p.arc_len, boot: e.boot });
             }
         }
-        self.cola.paint(g, ctx, ancla);
-        self.prensas.paint(g, ctx, prensas::Pinta { ancla, press: p.press });
-        self.voz.paint(g, ctx, voz::Pinta { ancla, ripple: p.ripple });
-        self.ondas.paint(g, ctx, ancla);
-        self.radar.paint(g, ctx, radar::Pinta { ancla, sweep: p.sweep, giro: a.arc_phase });
-        self.ideas.paint(g, ctx, ideas::Pinta { ancla, orbit: p.orbit, amp: p.amp, fase: a.phase, low: e.low });
-        self.paquetes.paint(g, ctx, paquetes::Pinta { ancla, packets: p.packets, low: e.low });
-        self.puntadas.paint(g, ctx, puntadas::Pinta { ancla, stitch: p.stitch });
-        self.git.paint(g, ctx, git::Pinta { ancla, git: p.git });
-        self.pregunta.paint(g, ctx, pregunta::Pinta { ancla, droop: p.droop });
-        self.zetas.paint(g, ctx, zetas::Pinta { ancla, zzz: p.zzz, low: e.low });
-        self.brote.paint(g, ctx, brote::Pinta { ancla, bud: p.bud, fase: a.phase });
-        self.lupa.paint(g, ctx, lupa::Pinta { ancla, lens: p.lens, low: e.low });
-        self.centro.pintar(g, ctx, &e);
-        self.hijos.paint(g, ctx, ancla);
-        if !self.mini {
+        if ve(CAPA_COLA) {
+            self.cola.paint(g, ctx, ancla);
+        }
+        if ve(CAPA_PRENSAS) {
+            self.prensas.paint(g, ctx, prensas::Pinta { ancla, press: p.press });
+        }
+        if ve(CAPA_VOZ) {
+            self.voz.paint(g, ctx, voz::Pinta { ancla, ripple: p.ripple });
+        }
+        if ve(CAPA_ONDAS) {
+            self.ondas.paint(g, ctx, ancla);
+        }
+        if ve(CAPA_RADAR) {
+            self.radar.paint(g, ctx, radar::Pinta { ancla, sweep: p.sweep, giro: a.arc_phase });
+        }
+        if ve(CAPA_IDEAS) {
+            self.ideas.paint(g, ctx, ideas::Pinta { ancla, orbit: p.orbit, amp: p.amp, fase: a.phase, low: e.low });
+        }
+        if ve(CAPA_PAQUETES) {
+            self.paquetes.paint(g, ctx, paquetes::Pinta { ancla, packets: p.packets, low: e.low });
+        }
+        if ve(CAPA_PUNTADAS) {
+            self.puntadas.paint(g, ctx, puntadas::Pinta { ancla, stitch: p.stitch });
+        }
+        if ve(CAPA_GIT) {
+            self.git.paint(g, ctx, git::Pinta { ancla, git: p.git });
+        }
+        if ve(CAPA_PREGUNTA) {
+            self.pregunta.paint(g, ctx, pregunta::Pinta { ancla, droop: p.droop });
+        }
+        if ve(CAPA_ZETAS) {
+            self.zetas.paint(g, ctx, zetas::Pinta { ancla, zzz: p.zzz, low: e.low });
+        }
+        if ve(CAPA_BROTE) {
+            self.brote.paint(g, ctx, brote::Pinta { ancla, bud: p.bud, fase: a.phase });
+        }
+        if ve(CAPA_LUPA) {
+            self.lupa.paint(g, ctx, lupa::Pinta { ancla, lens: p.lens, low: e.low });
+        }
+        if ve(CAPA_CENTRO) {
+            self.centro.pintar(g, ctx, &e);
+        }
+        if ve(CAPA_HIJOS) {
+            self.hijos.paint(g, ctx, ancla);
+        }
+        if !self.mini && ve(CAPA_MOTAS) {
             let m = particulas::Pinta { motes: p.motes, boot: e.boot, press: p.press, mirada: self.mirada.gaze, low: e.low };
             self.motas.paint(g, ctx, m);
         }
